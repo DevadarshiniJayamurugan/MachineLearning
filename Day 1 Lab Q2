@@ -1,0 +1,76 @@
+import csv
+
+def load_data(filename):
+    data = []
+    with open(filename, 'r') as file:
+        csv_reader = csv.reader(file)
+        for row in csv_reader:
+            data.append(row)
+    return data
+
+def initialize_hypotheses(data):
+    num_features = len(data[0]) - 1
+    S = ['0'] * num_features
+    G = ['?'] * num_features
+    return S, G
+
+def is_consistent(hypothesis, example):
+    for i in range(len(hypothesis)):
+        if hypothesis[i] != '0' and hypothesis[i] != example[i]:
+            return False
+    return True
+
+def remove_inconsistent(hypotheses, example, target):
+    consistent_hypotheses = []
+    for hypothesis in hypotheses:
+        if is_consistent(hypothesis, example) and hypothesis[target] == example[target]:
+            consistent_hypotheses.append(hypothesis)
+    return consistent_hypotheses
+
+def generalize(hypothesis, example):
+    for i in range(len(hypothesis)):
+        if hypothesis[i] == '0':
+            hypothesis[i] = example[i]
+        elif hypothesis[i] != example[i]:
+            hypothesis[i] = '?'
+    return hypothesis
+
+def specialize(hypotheses, example, target):
+    new_hypotheses = []
+    for hypothesis in hypotheses:
+        if hypothesis[target] != example[target]:
+            new_hypothesis = hypothesis[:]
+            new_hypothesis[target] = example[target]
+            new_hypotheses.append(new_hypothesis)
+    return new_hypotheses
+
+def candidate_elimination(data):
+    S, G = initialize_hypotheses(data)
+    target = len(data[0]) - 1
+
+    for example in data:
+        if example[target] == 'Yes':
+            G = remove_inconsistent(G, example, target)
+            for s in list(S):
+                if not is_consistent(s, example):
+                    S.remove(s)
+                    S += specialize([s], example, target)
+        else:
+            S = remove_inconsistent(S, example, target)
+            for g in list(G):
+                if is_consistent(g, example):
+                    G.remove(g)
+                    G += generalize(g[:], example)
+    
+    return S, G
+
+def main():
+    data = load_data('training_data.csv')
+    S, G = candidate_elimination(data)
+    print("Final hypothesis space S:")
+    print(S)
+    print("Final hypothesis space G:")
+    print(G)
+
+if __name__ == "__main__":
+    main()
