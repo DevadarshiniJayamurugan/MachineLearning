@@ -1,0 +1,92 @@
+import numpy as np
+
+class Node:
+    def __init__(self, attribute):
+        self.attribute = attribute
+        self.children = {}
+        self.value = None
+
+def entropy(y):
+    _, counts = np.unique(y, return_counts=True)
+    probabilities = counts / len(y)
+    return -np.sum(probabilities * np.log2(probabilities))
+
+def information_gain(X, y, attribute):
+    entropy_before_split = entropy(y)
+    _, counts = np.unique(X[:, attribute], return_counts=True)
+    probabilities = counts / len(X)
+    entropy_after_split = np.sum(probabilities * np.array([entropy(y[X[:, attribute] == value]) for value in np.unique(X[:, attribute])]))
+    return entropy_before_split - entropy_after_split
+
+def id3(X, y, attributes):
+    if len(np.unique(y)) == 1:
+        leaf = Node(None)
+        leaf.value = y[0]
+        return leaf
+    if len(attributes) == 0:
+        leaf = Node(None)
+        leaf.value = np.bincount(y).argmax()
+        return leaf
+    best_attribute = max(attributes, key=lambda x: information_gain(X, y, x))
+    node = Node(best_attribute)
+    for value in np.unique(X[:, best_attribute]):
+        child_X = X[X[:, best_attribute] == value]
+        child_y = y[X[:, best_attribute] == value]
+        if len(child_X) == 0:
+            leaf = Node(None)
+            leaf.value = np.bincount(y).argmax()
+            node.children[value] = leaf
+        else:
+            node.children[value] = id3(child_X, child_y, [attr for attr in attributes if attr != best_attribute])
+    return node
+
+def predict(root, sample):
+    if root.value is not None:
+        return root.value
+    attribute_value = sample[root.attribute]
+    if attribute_value not in root.children:
+        return np.nan
+    return predict(root.children[attribute_value], sample)
+
+# Sample dataset for demonstration
+X_train = np.array([
+    ['Sunny', 'Hot', 'High', 'Weak'],
+    ['Sunny', 'Hot', 'High', 'Strong'],
+    ['Overcast', 'Hot', 'High', 'Weak'],
+    ['Rain', 'Mild', 'High', 'Weak'],
+    ['Rain', 'Cool', 'Normal', 'Weak'],
+    ['Rain', 'Cool', 'Normal', 'Strong'],
+    ['Overcast', 'Cool', 'Normal', 'Strong'],
+    ['Sunny', 'Mild', 'High', 'Weak'],
+    ['Sunny', 'Cool', 'Normal', 'Weak'],
+    ['Rain', 'Mild', 'Normal', 'Weak'],
+    ['Sunny', 'Mild', 'Normal', 'Strong'],
+    ['Overcast', 'Mild', 'High', 'Strong'],
+    ['Overcast', 'Hot', 'Normal', 'Weak'],
+    ['Rain', 'Mild', 'High', 'Strong']
+])
+
+y_train = np.array(['No', 'No', 'Yes', 'Yes', 'Yes', 'No', 'Yes', 'No', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No'])
+
+# Attributes: Outlook, Temperature, Humidity, Wind
+attributes = [0, 1, 2, 3]
+
+# Build the decision tree
+root = id3(X_train, y_train, attributes)
+
+# Print the decision tree (for visualization)
+def print_tree(node, depth=0):
+    if node.value is not None:
+        print(" " * depth, "Prediction:", node.value)
+        return
+    print(" " * depth, "Attribute:", node.attribute)
+    for value, child_node in node.children.items():
+        print(" " * depth, "Value:", value)
+        print_tree(child_node, depth + 2)
+
+print("Decision Tree:")
+print_tree(root)
+
+# Demonstrate classification of a new sample
+new_sample = ['Sunny', 'Mild', 'High', 'Strong']
+print("\nClassification of new sample (", new_sample, "):", predict(root, new_sample))
