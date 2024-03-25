@@ -1,0 +1,76 @@
+import csv
+
+def load_data(filename):
+    data = []
+    with open(filename, 'r') as file:
+        csv_reader = csv.reader(file)
+        for row in csv_reader:
+            data.append(row)
+    return data
+
+def find_s_algorithm(data):
+    num_attributes = len(data[0]) - 1
+    hypothesis = ['0'] * num_attributes
+    
+    for instance in data:
+        if instance[-1] == 'Malignant':
+            for i in range(num_attributes):
+                if hypothesis[i] == '0':
+                    hypothesis[i] = instance[i]
+                elif hypothesis[i] != instance[i]:
+                    hypothesis[i] = '?'
+    
+    return hypothesis
+
+def candidate_elimination(data):
+    num_attributes = len(data[0]) - 1
+    S = ['0'] * num_attributes
+    G = ['?'] * num_attributes
+    
+    for instance in data:
+        attributes = instance[:-1]
+        target = instance[-1]
+        if target == 'Malignant':
+            # Remove inconsistent hypotheses from G
+            G = [g for g in G if all(g[i] == '?' or g[i] == attributes[i] for i in range(num_attributes))]
+            # For each hypothesis s in S that is not consistent with instance, remove it from S
+            S = [s for s in S if any(s[i] == '0' or s[i] == attributes[i] for i in range(num_attributes))]
+            # Add maximally specific hypotheses to S
+            S += [g.copy() for g in G if all(g[i] == attributes[i] for i in range(num_attributes))]
+        else:  # Target is Benign
+            # Remove inconsistent hypotheses from S
+            S = [s for s in S if all(s[i] == '?' or s[i] == attributes[i] for i in range(num_attributes))]
+            # For each hypothesis g in G that is not consistent with instance, remove it from G
+            G = [g for g in G if any(g[i] == '?' or g[i] != attributes[i] for i in range(num_attributes))]
+            # Add maximally general hypotheses to G
+            for i in range(num_attributes):
+                if S[0][i] != attributes[i]:
+                    new_hypothesis = ['?'] * num_attributes
+                    new_hypothesis[i] = attributes[i]
+                    G.append(new_hypothesis)
+    
+    return S, G
+
+def main():
+    filename = 'training_data.csv'
+    data = load_data(filename)
+    
+    print("Training data:")
+    for row in data:
+        print(row)
+    
+    print("\nFIND-S algorithm:")
+    hypothesis_find_s = find_s_algorithm(data)
+    print("Most specific hypothesis:", hypothesis_find_s)
+    
+    print("\nCandidate Elimination algorithm:")
+    S, G = candidate_elimination(data)
+    print("Final hypothesis space S:")
+    for hypothesis in S:
+        print(hypothesis)
+    print("Final hypothesis space G:")
+    for hypothesis in G:
+        print(hypothesis)
+
+if __name__ == "__main__":
+    main()
