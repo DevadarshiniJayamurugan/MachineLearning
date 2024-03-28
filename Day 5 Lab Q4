@@ -1,0 +1,58 @@
+import numpy as np
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+
+class Perceptron:
+    def __init__(self, learning_rate=0.01, n_iters=100):
+        self.lr = learning_rate
+        self.n_iters = n_iters
+        self.weights = None
+        self.bias = None
+
+    def fit(self, X, y):
+        n_samples, n_features = X.shape
+        self.weights = np.zeros(n_features)
+        self.bias = 0
+
+        for _ in range(self.n_iters):
+            for idx, x_i in enumerate(X):
+                linear_output = np.dot(x_i, self.weights) + self.bias
+                y_predicted = self.step_function(linear_output)
+
+                # Update weights and bias
+                update = self.lr * (y[idx] - y_predicted)
+                self.weights += update * x_i
+                self.bias += update
+
+    def step_function(self, x):
+        return np.where(x >= 0, 1, 0)
+
+    def predict(self, X):
+        linear_output = np.dot(X, self.weights) + self.bias
+        y_predicted = self.step_function(linear_output)
+        return y_predicted
+
+# Load Iris dataset
+iris = load_iris()
+X, y = iris.data, iris.target
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Initialize and train the Perceptron
+perceptron = Perceptron(learning_rate=0.1, n_iters=1000)
+perceptron.fit(X_train, y_train)
+
+# Make predictions on test data
+y_pred = perceptron.predict(X_test)
+
+# Calculate accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
