@@ -1,0 +1,73 @@
+import numpy as np
+from scipy.stats import multivariate_normal
+
+class GMM:
+    def __init__(self, n_components, max_iter=100, tol=1e-6):
+        self.n_components = n_components
+        self.max_iter = max_iter
+        self.tol = tol
+        self.weights = None
+        self.means = None
+        self.covariances = None
+    
+    def fit(self, X):
+        n_samples, n_features = X.shape
+        
+        # Initialize parameters
+        self.weights = np.ones(self.n_components) / self.n_components
+        self.means = X[np.random.choice(n_samples, self.n_components, replace=False)]
+        self.covariances = [np.cov(X.T) for _ in range(self.n_components)]
+        
+        prev_likelihood = None
+        
+        for _ in range(self.max_iter):
+            # E-step: compute responsibilities
+            responsibilities = np.zeros((n_samples, self.n_components))
+            for i in range(self.n_components):
+                responsibilities[:, i] = self.weights[i] * multivariate_normal.pdf(X, self.means[i], self.covariances[i])
+            responsibilities /= np.sum(responsibilities, axis=1, keepdims=True)
+            
+            # M-step: update parameters
+            Nk = np.sum(responsibilities, axis=0)
+            self.weights = Nk / n_samples
+            self.means = np.dot(responsibilities.T, X) / Nk[:, None]
+            for i in range(self.n_components):
+                diff = X - self.means[i]
+                self.covariances[i] = np.dot(responsibilities[:, i] * diff.T, diff) / Nk[i]
+            
+            # Compute log likelihood
+            log_likelihood = np.sum(np.log(np.sum([self.weights[i] * multivariate_normal.pdf(X, self.means[i], self.covariances[i]) for i in range(self.n_components)], axis=0)))
+            
+            # Check convergence
+            if prev_likelihood is not None and np.abs(log_likelihood - prev_likelihood) < self.tol:
+                break
+            
+            prev_likelihood = log_likelihood
+    
+    def predict(self, X):
+        responsibilities = np.zeros((X.shape[0], self.n_components))
+        for i in range(self.n_components):
+            responsibilities[:, i] = self.weights[i] * multivariate_normal.pdf(X, self.means[i], self.covariances[i])
+        return np.argmax(responsibilities, axis=1)
+
+# Example usage:
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    
+    # Generate some synthetic data
+    np.random.seed(0)
+    X1 = np.random.multivariate_normal([0, 0], [[1, 0], [0, 1]], 100)
+    X2 = np.random.multivariate_normal([3, 3], [[1, 0], [0, 1]], 100)
+    X = np.concatenate([X1, X2])
+    
+    # Training GMM
+    gmm = GMM(n_components=2)
+    gmm.fit(X)
+    
+    # Plotting clusters
+    plt.scatter(X[:, 0], X[:, 1], c=gmm.predict(X), cmap='viridis', alpha=0.5)
+    plt.scatter(gmm.means[:, 0], gmm.means[:, 1], c='red', marker='x', s=100)
+    plt.xlabel('X1')
+    plt.ylabel('X2')
+    plt.title('Gaussian Mixture Model')
+    plt.show()
