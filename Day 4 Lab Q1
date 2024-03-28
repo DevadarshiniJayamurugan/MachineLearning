@@ -1,0 +1,31 @@
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, classification_report
+
+# Generate some synthetic data for credit score classification
+np.random.seed(0)
+num_samples = 1000
+credit_score = np.random.randint(300, 850, num_samples)
+income = np.random.randint(20000, 200000, num_samples)
+age = np.random.randint(18, 80, num_samples)
+is_default = np.random.randint(0, 2, num_samples)  # Binary target variable: 0 for non-default, 1 for default
+
+# Combine features into a feature matrix
+X = np.column_stack((credit_score, income, age))
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, is_default, test_size=0.2, random_state=42)
+
+# Train a logistic regression model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+print("Accuracy:", accuracy)
+print("Classification Report:")
+print(classification_report(y_test, y_pred))
