@@ -1,0 +1,37 @@
+import pandas as pd
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+
+# Load sales data
+sales_data = pd.read_csv('sales_data.csv')
+
+# Convert date column to datetime format
+sales_data['Date'] = pd.to_datetime(sales_data['Date'])
+
+# Set date column as index
+sales_data.set_index('Date', inplace=True)
+
+# Train-test split
+train_data = sales_data.loc[:'2023-12-31']
+test_data = sales_data.loc['2024-01-01':]
+
+# Fit ARIMA model
+model = ARIMA(train_data, order=(5,1,0))
+fitted_model = model.fit()
+
+# Forecast sales
+forecast, stderr, conf_int = fitted_model.forecast(steps=len(test_data))
+
+# Plot actual vs. forecasted sales
+plt.plot(test_data, label='Actual')
+plt.plot(test_data.index, forecast, label='Forecast', color='red')
+plt.legend()
+plt.xlabel('Date')
+plt.ylabel('Sales')
+plt.title('Actual vs. Forecasted Sales')
+plt.show()
+
+# Calculate RMSE
+rmse = mean_squared_error(test_data, forecast, squared=False)
+print("Root Mean Squared Error (RMSE):", rmse)
